@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Create the UCSD IEEE Weekly Newsletter</title>
+		<style type="text/css">
+			p{
+					margin: 0;
+					padding: 0;
+			}
+			h2{
+					display: inline;
+			}
+			.smallText, .deleteText{
+					color: #888;
+					font-size: .7em;
+					margin-left: 35px;
+			}
+			.smallText:hover{
+					text-decoration: underline;
+			}
+			.eventBlock:hover, .event:hover{
+					color: #003399;
+			}
+			#statusBar{
+					width: 100%;
+					margin: 0;
+					padding: 3px 3px;
+					background-color: #777;
+					color: #FFF;
+			}
+	  	#statusBar #previewLabel{
+					position: absolute;
+					right: 5px;
+			}
+	  	#statusBar #removeLabel{
+					position: absolute;
+					right: 100px;
+			}
+			#preview{
+					width: 90%;
+					height: 90%;
+					position: absolute;
+					top: 50px;
+					right: 30px;
+					background-color: #CCC;
+			}
+			#preview iframe{
+					margin: 5px 10px;
+					background-color: #FFF;
+			}
+			#removePane{
+					position: absolute;
+					top: 50px;
+					right: 30px;
+					background-color: #CCC;
+					width: 260px;
+					padding: 0 0 20px 20px;
+			}
+			#heightInput, #widthInput{
+					margin-left: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="statusBar">	
+			<span>To preview the newsletter, check Preview. To remove an event, check Remove Event.</span>
+			<label id="previewLabel"><input type="checkbox" name="preview" id="previewInput" />Preview</label>
+			<label id="removeLabel"><input type="checkbox" name="remove" id="removeInput" />Remove Events</label>
+		</div>
+		
+		<div id="preview">
+				<iframe src="newsletter.php" width="98%" height="98%"></iframe>
+		</div>
+		<div id="removePane">
+				<form id="removeForm" method="GET">
+					<h3>Remove an Event</h3>
+					<div id="removeSelections">
+					</div>
+				</form>
+				<button id="submitRemove">Remove Event</button>
+		</div>
+
+		<form id="form">
+			<div id="edition-inputs">
+				<label>Week	<select name="weekNum" value="" id="weekNum">
+													<option value="1">1</option>
+													<option value="2">2</option>
+													<option value="3">3</option>
+													<option value="4">4</option>
+													<option value="5">5</option>
+													<option value="6">6</option>
+													<option value="7">7</option>
+													<option value="8">8</option>
+													<option value="9">9</option>
+													<option value="10">10</option>
+											</select>
+						</label>	
+					<label>	<select name="quarterType" value="" id="quarterType">
+											<option value="fall">Fall</option>
+											<option value="winter">Winter</option>
+											<option value="spring">Spring</option>
+											<option value="summer">Summer</option>
+									</select> Quarter
+					</label>
+
+			</div>
+			<div id="more-inputs">
+			</div>
+		</form>
+		<button id="submitEvents">Submit Events</button>
+		<button type="button" id="addEvent">Add more Events!</button>
+
+		<form method="POST" action="newsletter.php">
+			<input type="submit" id="goToNewsletter" value="Go To Final Newsletter" />
+		</form>
+
+	</body>
+	<script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
+	<script type="text/javascript">
+		var formInput = "" +
+				"<div><h2 class=\"eventBlock\">Event</h2><span class=\"smallText\">Delete Event</span>" +
+				"<div class=\"form-inputs\">" + 
+					"<p><label>Headline: <input type=\"text\" name=\"headline\" value=\"\"/></label></p>" +
+					"<p><label>Image: <input type=\"text\" name=\"image\" value=\"\" /></label>" +
+							"<label id=\"widthInput\">Width: <input type=\"text\" size=\"2\" name=\"dimension\" value=\"\" />px</label>" +
+							"<label id=\"heightInput\">Height: <input type=\"text\" size=\"2\" name=\"dimension\" value=\"\" />px</label>" +
+					"</p>" +
+					"<p><label>Date: <input type=\"text\" name=\"date\" value=\"\" /></label></p>" +
+					"<p><label>Time: <input type=\"text\" name=\"time\" value=\"\" /></label></p>" +
+					"<p><label>Location: <input type=\"text\" name=\"location\" value=\"\" /></label></p>" +
+					"<p><label>Facebook Event: <input type=\"text\" name=\"fbEvent\" value=\"\" /></label></p>" +
+					"<p><label>RSVP Link: <input type=\"text\" name=\"rsvpLink\" value=\"\" /></label></p>" +
+					"<label><p>Description: </p> <textarea name=\"description\" rows=\"20\" cols=\"75\" value=\"\"></textarea></label>" +
+				"</div>" +
+				"</div>";
+		$(formInput).prependTo($("#more-inputs"));
+		
+		$(".eventBlock").bind("click",function(){
+				$(this).parent().children(".form-inputs").slideToggle("fast");
+				$(this).attr("class", "event");
+		});
+
+		$(".smallText").bind("click",function(){
+				$(this).parent().remove();
+		});
+
+		$("#addEvent").click(function(){
+			$(formInput).appendTo($("#more-inputs"));
+
+			$(".eventBlock").bind("click",function(){
+				$(this).parent().children(".form-inputs").slideToggle("fast");
+				$(this).attr("class", "event");
+			});
+
+			$(".smallText").bind("click",function(){
+				$(this).parent().remove();
+			});
+		});
+
+		/*** Updating form field, specifically edition ***/
+		var getEdition = $.ajax({
+			type: 'POST',
+			url: 'grabEdition.php',
+		});
+		getEdition.done(function(message){
+			var response = JSON.parse(message);
+			$("#weekNum").attr("value", response["weekNum"]);
+			$("#quarterType").attr("value", response["quarterType"]);
+		});
+
+	  /*** handling opening and closing of preview and remove panels ***/
+		checkIfChecked();
+		$("#statusBar label").bind("click", checkIfChecked);
+		
+		function checkIfChecked(){
+			$("#preview iframe").attr("src", "newsletter.php");
+			if( $("#previewInput").prop("checked") )
+				$("#preview").show();
+			else
+				$("#preview").hide();
+
+			if( $("#removeInput").prop("checked") )
+				$("#removePane").show();
+			else
+				$("#removePane").hide();
+		}
+
+		/*** grabbing remove selection form ***/
+		function getSelections(){
+			var getSelectionForm = $.ajax({
+			type: 'POST',
+			url: 'grabEntries.php',
+			});
+			getSelectionForm.done(function(message){
+				$("#removeSelections").empty();
+				$("#removeSelections").append(message);
+        $("#removeSelections").append("<label><input type=\"checkbox\" name=\"postsToRemove\" value=\"all_Posts\" />ALL POSTS</label>");
+			});
+  	}
+    getSelections();
+
+		/*** remove form submission ****/
+		$("#submitRemove").click(removePosts);
+		function removePosts(){
+			getSelections();
+			var postsToRemoveArr = [];
+			var postsSelection = $('input[name="postsToRemove"]:checked');
+			var postsToRemove = jQuery.makeArray(postsSelection);
+			for (var i = 0; i < postsToRemove.length; i++){
+					postsToRemoveArr[i] = postsToRemove[i].value;
+			}
+			var removeSelections = $.ajax({
+				type: 'POST',
+				url: 'newsletter.php',
+				data: {postsToRemove:postsToRemoveArr}
+			});
+			getSelections();
+		}
+
+		/***** Event Submission *****/
+		$("#submitEvents").click(sendForm);
+
+		function sendForm(){
+			
+			/*** Headlines ***/
+			var headlinesArr = [];
+			var headlines = $('input[name="headline"]');
+			var headlinesToSubmit = jQuery.makeArray(headlines);
+			for ( var i = 0; i < headlinesToSubmit.length; i++ ){
+					headlinesArr[i] = headlinesToSubmit[i].value;
+			}
+			
+			/*** image ***/
+			var imageArr = [];
+			var images = $('input[name="image"]');
+			var imagesToSubmit = jQuery.makeArray(images);
+			for ( var i = 0; i < imagesToSubmit.length; i++ ){
+					imageArr[i] = imagesToSubmit[i].value;
+			}
+			
+			/*** dimensions ***/
+			var dimensionArr = [];
+			var dimensions = $('input[name="dimension"]');
+			var dimensionsToSubmit = jQuery.makeArray(dimensions);
+			for ( var i = 0; i < dimensionsToSubmit.length; i++ ){
+					dimensionArr[i] = dimensionsToSubmit[i].value;
+			}
+			
+			/*** date ***/
+			var dateArr = [];
+			var dates = $('input[name="date"]');
+			var datesToSubmit = jQuery.makeArray(dates);
+			for ( var i = 0; i < datesToSubmit.length; i++ ){
+					dateArr[i] = datesToSubmit[i].value;
+			}
+
+			/*** time ***/
+			var timeArr = [];
+			var times = $('input[name="time"]');
+			var timesToSubmit = jQuery.makeArray(times);
+			for ( var i = 0; i < timesToSubmit.length; i++ ){
+					timeArr[i] = timesToSubmit[i].value;
+			}
+
+			/*** Location ***/
+			var locationsArr = [];
+			var locations = $('input[name="location"]');
+			var locationsToSubmit = jQuery.makeArray(locations);
+			for ( var i = 0; i < locationsToSubmit.length; i++ ){
+					locationsArr[i] = locationsToSubmit[i].value;
+			}
+
+			/*** Facebook ***/
+			var fbArr = [];
+			var fb = $('input[name="fbEvent"]');
+			var fbToSubmit = jQuery.makeArray(fb);
+			for ( var i = 0; i < fbToSubmit.length; i++ ){
+					fbArr[i] = fbToSubmit[i].value;
+			}
+
+			/*** RSVP Link ***/
+			var rsvpArr = [];
+			var rsvp = $('input[name="rsvpLink"]');
+			var rsvpToSubmit = jQuery.makeArray(rsvp);
+			for ( var i = 0; i < rsvpToSubmit.length; i++ ){
+					rsvpArr[i] = rsvpToSubmit[i].value;
+			}
+
+			/*** Description ***/
+			var descArr = [];
+			var descriptions = $('textarea[name="description"]');
+			var descToSubmit = jQuery.makeArray(descriptions);
+			for ( var i = 0; i < descToSubmit.length; i++ ){
+					descArr[i] = descToSubmit[i].value;
+			}
+			
+			/*** Edition ***/
+			var quarter = $("#quarterType").attr("value");
+			var week = $("#weekNum").attr("value");
+
+			var submitFields = $.ajax({
+				type: 'POST',
+				url: 'newsletter.php',
+				data: {
+					quarterType: quarter,
+					weekNum: week,
+					headline: headlinesArr,
+					image: imageArr,
+					dimensions: dimensionArr,
+					time: timeArr,
+					date: dateArr,
+					location: locationsArr,
+					fbEvent: fbArr,
+					rsvpLink: rsvpArr,	
+					description: descArr
+				}
+			});
+			getSelections();
+		}
+
+		
+	</script>
+</html>
